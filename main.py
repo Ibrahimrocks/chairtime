@@ -1,6 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 
 app = FastAPI(title="ChairTime")
+
+BARBERS = {
+    "marco": "Marco",
+    "lea": "Lea",
+}
 
 SLOTS = [
     {"id": "sl_1", "barber_id": "marco", "starts_at": "2026-10-17T10:00", "status": "open"},
@@ -14,9 +19,11 @@ def live():
     return {"status": "ok"}
 
 @app.get("/barbers/{barber_id}/slots")
-def list_slots(barber_id: str):
+def list_slots(barber_id: str, date: str):
+    if barber_id not in BARBERS:
+        raise HTTPException(status_code=404, detail="Barber not found")
     result = []
     for slot in SLOTS:
-        if slot["barber_id"]== barber_id:
+        if slot["barber_id"]== barber_id and slot["starts_at"].startswith(date):
             result.append(slot)
     return {"items": result}
