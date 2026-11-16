@@ -1,29 +1,38 @@
-from fastapi import FastAPI, HTTPException
+from datetime import date
+
+from fastapi import Depends, FastAPI, HTTPException, Query
+from sqlalchemy.orm import Session
+
+from app import services
+from app.db import get_session
 
 app = FastAPI(title="ChairTime")
 
-BARBERS = {
-    "marco": "Marco",
-    "lea": "Lea",
-}
-
-SLOTS = [
-    {"id": "sl_1", "barber_id": "marco", "starts_at": "2026-10-17T10:00", "status": "open"},
-    {"id": "sl_2", "barber_id": "marco", "starts_at": "2026-10-17T10:30", "status": "booked"},
-    {"id": "sl_3", "barber_id": "marco", "starts_at": "2026-10-18T10:00", "status": "open"},
-    {"id": "sl_4", "barber_id": "lea", "starts_at": "2026-10-17T10:00", "status": "open"},
-]
 
 @app.get("/health/live")
 def live():
     return {"status": "ok"}
 
+
 @app.get("/barbers/{barber_id}/slots")
-def list_slots(barber_id: str, date: str):
-    if barber_id not in BARBERS:
-        raise HTTPException(status_code=404, detail="Barber not found")
-    result = []
-    for slot in SLOTS:
-        if slot["barber_id"]== barber_id and slot["starts_at"].startswith(date):
-            result.append(slot)
-    return {"items": result}
+def list_slots(
+    barber_id: str,
+    day: date = Query(alias="date"),
+    session: Session = Depends(get_session),
+):
+    try:
+        slots = services.list_slots_for_day(session, barber_id, day)
+    except services.NotFound as error:
+        raise HTTPException(status_code=404, detail=str(error))
+
+    return {
+        "items": [
+            {
+                "id": slot.id,
+                "barber_id": slot.barber_id,
+                "starts_at": slot.starts_at.astimezone(services.SHOP_TZ).isoformat(),
+                "status": slot.status,
+            }
+            for slot in slots
+        ]
+    }
