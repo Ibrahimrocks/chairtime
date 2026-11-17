@@ -1,9 +1,9 @@
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
-from app.models import Barber, Slot, User
+from app.models import Barber, Booking, Slot, User
 
 
 def get_barber(session: Session, barber_id: str) -> Barber | None:
@@ -24,3 +24,22 @@ def get_user_by_email(session: Session, email: str) -> User | None:
 
 def get_user(session: Session, user_id: int) -> User | None:
     return session.get(User, user_id)
+
+def get_slot(session: Session, slot_id: int) -> Slot | None:
+    return session.get(Slot, slot_id)
+
+
+def claim_slot(session: Session, slot_id: int) -> bool:
+    result = session.execute(
+        update(Slot)
+        .where(Slot.id == slot_id, Slot.status == "open")
+        .values(status="booked")
+    )
+    return result.rowcount == 1
+
+
+def add_booking(session: Session, slot_id: int, customer_id: int) -> Booking:
+    booking = Booking(slot_id=slot_id, customer_id=customer_id, status="confirmed")
+    session.add(booking)
+    session.flush()
+    return booking

@@ -73,3 +73,26 @@ def list_slots(
             for slot in slots
         ]
     }
+
+@app.post("/slots/{slot_id}/bookings", status_code=201)
+def book(
+    slot_id: int,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    try:
+        booking, slot = services.book_slot(session, slot_id, user)
+    except services.NotFound as error:
+        raise HTTPException(status_code=404, detail=str(error))
+    except services.Forbidden as error:
+        raise HTTPException(status_code=403, detail=str(error))
+    except services.SlotUnavailable as error:
+        raise HTTPException(status_code=409, detail=str(error))
+
+    return {
+        "id": booking.id,
+        "slot_id": slot.id,
+        "barber_id": slot.barber_id,
+        "starts_at": slot.starts_at.astimezone(services.SHOP_TZ).isoformat(),
+        "status": booking.status,
+    }
