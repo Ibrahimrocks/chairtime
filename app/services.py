@@ -71,3 +71,6 @@ def book_slot(session: Session, slot_id: int, user: User) -> tuple[Booking, Slot
     booking = repositories.add_booking(session, slot_id, user.id)
     session.commit()
     return booking, slot
+
+def my_bookings(session: Session, user: User) -> list:
+    return repositories.list_bookings_for_customer(session, user.id)

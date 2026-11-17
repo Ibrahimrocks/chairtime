@@ -29,6 +29,15 @@ def get_current_user(
     except services.Unauthenticated as error:
         raise HTTPException(status_code=401, detail=str(error))
 
+def booking_response(booking, slot) -> dict:
+    return {
+        "id": booking.id,
+        "slot_id": slot.id,
+        "barber_id": slot.barber_id,
+        "starts_at": slot.starts_at.astimezone(services.SHOP_TZ).isoformat(),
+        "status": booking.status,
+    }
+
 
 @app.get("/health/live")
 def live():
@@ -89,10 +98,12 @@ def book(
     except services.SlotUnavailable as error:
         raise HTTPException(status_code=409, detail=str(error))
 
-    return {
-        "id": booking.id,
-        "slot_id": slot.id,
-        "barber_id": slot.barber_id,
-        "starts_at": slot.starts_at.astimezone(services.SHOP_TZ).isoformat(),
-        "status": booking.status,
-    }
+    return booking_response(booking, slot)
+
+@app.get("/me/bookings")
+def my_bookings(
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    rows = services.my_bookings(session, user)
+    return {"items": [booking_response(booking, slot) for booking, slot in rows]}

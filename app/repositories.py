@@ -53,3 +53,12 @@ def claim_slot_naive(session: Session, slot_id: int) -> bool:
     slot.status = "booked"
     session.flush()
     return True
+
+def list_bookings_for_customer(session: Session, customer_id: int) -> list:
+    query = (
+        select(Booking, Slot)
+        .join(Slot, Booking.slot_id == Slot.id)
+        .where(Booking.customer_id == customer_id, Booking.status == "confirmed")
+        .order_by(Slot.starts_at)
+    )
+    return list(session.execute(query).all())
