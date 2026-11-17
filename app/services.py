@@ -1,3 +1,4 @@
+import os
 from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
@@ -8,6 +9,7 @@ from app import repositories, security
 from app.models import Booking, Slot, User
 
 SHOP_TZ = ZoneInfo("America/Toronto")
+NAIVE_BOOKING = os.environ.get("NAIVE_BOOKING") == "1"
 
 
 class NotFound(Exception):
@@ -61,7 +63,8 @@ def book_slot(session: Session, slot_id: int, user: User) -> tuple[Booking, Slot
     if slot is None:
         raise NotFound("Slot not found")
 
-    if not repositories.claim_slot(session, slot_id):
+    claim = repositories.claim_slot_naive if NAIVE_BOOKING else repositories.claim_slot
+    if not claim(session, slot_id):
         session.rollback()
         raise SlotUnavailable("This slot is already booked or blocked")
 

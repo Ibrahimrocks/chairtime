@@ -1,3 +1,4 @@
+import time
 from datetime import datetime
 
 from sqlalchemy import select, update
@@ -43,3 +44,12 @@ def add_booking(session: Session, slot_id: int, customer_id: int) -> Booking:
     session.add(booking)
     session.flush()
     return booking
+
+def claim_slot_naive(session: Session, slot_id: int) -> bool:
+    slot = session.get(Slot, slot_id)
+    if slot.status != "open":
+        return False
+    time.sleep(0.05)
+    slot.status = "booked"
+    session.flush()
+    return True
